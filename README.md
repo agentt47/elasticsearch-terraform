@@ -211,4 +211,133 @@ Change directory to terraform code and execute terraform  plan and apply command
     $ terraform plan
     $ terraform apply
 
+## Configure elasticsearch.yml for cluster
 
+Edit /etc/elasticsearch/elasticsearch.yml file on nodes to setup cluster.
+
+## Master node Configuration
+
+        node.name: 20.0.1.105
+        network.host: 20.0.1.105
+        discovery.zen.ping.unicast.hosts: ["20.0.1.105","20.0.1.61","20.0.1.157"]
+        discovery.zen.minimum_master_nodes: 2
+        cluster.name: elasticsearch
+        cluster.initial_master_nodes: ["20.0.1.105"]
+
+## Data node Configuration
+    Node1:
+        node.name: 20.0.1.61
+        network.host: 20.0.1.61
+        discovery.zen.ping.unicast.hosts: ["20.0.1.105","20.0.1.61","20.0.1.157"]
+        discovery.zen.minimum_master_nodes: 2
+        cluster.name: elasticsearch
+        cluster.initial_master_nodes: ["20.0.1.105"]
+
+    Node2:
+        node.name: 20.0.1.157
+        network.host: 20.0.1.157
+        discovery.zen.ping.unicast.hosts: ["20.0.1.105","20.0.1.61","20.0.1.157"]
+        discovery.zen.minimum_master_nodes: 2
+        cluster.name: elasticsearch
+        cluster.initial_master_nodes: ["20.0.1.105"]
+        
+
+## Starting elasticsearch service on all nodes
+
+elasticsearch service will start and setup 3 node cluster with master node.
+
+        $service elasticsearch start
+        
+## Cluster health ouput
+
+    [root@ip-20-0-1-105 elasticsearch]# curl -X GET "20.0.1.105:9200/_cluster/health?pretty"
+    {
+    "cluster_name" : "elasticsearch",
+    "status" : "green",
+    "timed_out" : false,
+    "number_of_nodes" : 3,
+    "number_of_data_nodes" : 3,
+    "active_primary_shards" : 2,
+    "active_shards" : 4,
+    "relocating_shards" : 0,
+    "initializing_shards" : 0,
+    "unassigned_shards" : 0,
+    "delayed_unassigned_shards" : 0,
+    "number_of_pending_tasks" : 0,
+    "number_of_in_flight_fetch" : 0,
+    "task_max_waiting_in_queue_millis" : 0,
+    "active_shards_percent_as_number" : 100.0
+       }
+
+## Node status output:
+    [root@ip-20-0-1-61 elasticsearch]# curl -X GET "20.0.1.105:9200/_cat/nodes?v=true"
+        ip         heap.percent ram.percent cpu load_1m load_5m load_15m node.role master name
+        20.0.1.105           39          92   9    0.05    0.13     0.07 dilmrt    -      20.0.1.105
+        20.0.1.157           26          93   9    0.04    0.11     0.05 dilmrt    *      20.0.1.157
+        20.0.1.61            59          94  10    0.09    0.15     0.07 dilmrt    -      20.0.1.61
+
+## PUT and GET data
+
+Put: curl -H 'Content-Type: application/json' -X POST 'http://20.0.1.105:9200/test/hellonitinnegi/1' -d '{ "message": "Hello Nitin Negi!" }'
+
+    [root@ip-20-0-1-157 elasticsearch]# curl -H 'Content-Type: application/json' -X POST 'http://20.0.1.105:9200/test/hellonitinnegi/1' -d '{ "message": "Hello Nitin Negi!" }'
+        {"_index":"test","_type":"hellonitinnegi","_id":"1","_version":1,"result":"created","_shards":{"total":2,"successful":1,"failed":0},"_seq_no":0,"_primary_term":1}            [root@ip-20-0-1-157 elasticsearch]#
+
+ Get: curl -X GET 'http://20.0.1.105:9200/test/hellonitinnegi/1?pretty'      
+
+        [root@ip-20-0-1-157 elasticsearch]# curl -X GET 'http://20.0.1.105:9200/test/hellonitinnegi/1?pretty'
+        {
+        "_index" : "test",
+        "_type" : "hellonitinnegi",
+        "_id" : "1",
+        "_version" : 1,
+        "_seq_no" : 0,
+        "_primary_term" : 1,
+        "found" : true,
+        "_source" : {
+        "message" : "Hello Nitin Negi!"
+        }
+        }
+
+## Security using user and certificate
+
+- Set passwords for default users
+       
+       cd /usr/share/elasticsearch
+       bin/elasticsearch-setup-passwords interactive
+
+- Add new user
+       
+       bin/elasticsearch-users useradd nitin -p Abc1234
+       
+- Create Certificate and update elasticsearch.yml file
+
+        cd /usr/share/elasticsearch
+        bin/elasticsearch-certutil ca
+        bin/elasticsearch-certutil cert --ca elastic-stack-ca.p12
+ 
+ -  Copy and paste following lines in elasticsearch.yml file
+        
+        xpack.security.enabled: true
+        xpack.security.transport.ssl.enabled: true
+        xpack.security.transport.ssl.verification_mode: certificate
+        xpack.security.transport.ssl.keystore.path: elastic-certificates.p12
+        xpack.security.transport.ssl.truststore.path: elastic-certificates.p12
+        
+  ## Cluster info using elastic user
+  
+ Error connecting without user: curl -X GET 'http://20.0.1.105:9200/_cat/nodes?v=true'
+  
+        [ec2-user@ip-20-0-1-157 ~]$ curl -X GET 'http://20.0.1.105:9200/_cat/nodes?v=true'
+        {"error":{"root_cause":[{"type":"security_exception","reason":"missing authentication credentials for REST request [/_cat/nodes?v=true]","header":{"WWW-  
+
+Connected with user and password: curl -u  elastic:iuZaBsJoCUBKoqFqXy6s -X GET 'http://20.0.1.105:9200/_cat/nodes?v=true'
+ 
+        [ec2-user@ip-20-0-1-157 ~]$ curl -u  elastic:iuZaBsJoCUBKoqFqXy6s -X GET 'http://20.0.1.105:9200/_cat/nodes?v=true'
+                 ip         heap.percent ram.percent cpu load_1m load_5m load_15m node.role master name
+                 20.0.1.105           41          93   0    0.00    0.00     0.00 dilmrt    -      20.0.1.105
+                 20.0.1.157           24          93   1    0.00    0.00     0.00 dilmrt    *      20.0.1.157
+                 20.0.1.61            66          92   0    0.00    0.00     0.00 dilmrt    -      20.0.1.61
+
+               
+ 
