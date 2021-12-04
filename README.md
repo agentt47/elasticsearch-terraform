@@ -205,11 +205,50 @@ Terraform will use the credentials to create aws resources.
 
 ## Execute Terraform confiuration 
 
-Change directory to terraform code and execute terraform  plan and apply commands.
+Change directory to terraform code and execute terraform  plan and apply commands.Check snippet for command ouput below is sample.
 
     $ cd /home/ec2-user/elastic
     $ terraform plan
     $ terraform apply
+    [ec2-user@ip-172-31-39-51 elastic]$ terraform apply
+         var.Subnet_cidr_block
+         Enter CIDR Block for Subnet:
+         Enter a value: 20.0.1.0/24
+         var.VPC_cidr_block
+         Enter CIDR Block for VPC:
+         Enter a value: 20.0.0.0/16
+         var.azone
+         Enter Availability Zone:
+         Enter a value: us-east-1a
+         var.from_port
+         Enter From Port:
+         Enter a value: 0
+         var.key
+         Enter Key Pair Name:
+         Enter a value: ES
+         var.num
+         Enter Number of Instance to create:
+         Enter a value: 3
+         var.protocol
+         Enter Security group protocol:
+         Enter a value: -1
+         var.security_cidr
+         Enter Security Group CIDR:
+         Enter a value: 0.0.0.0/0
+         var.to_port
+         Enter To Port:
+         Enter a value: 0
+
+        aws_vpc.ElasticVPC: Refreshing state... [id=vpc-0cf6571f16c775618]
+        aws_security_group.ssh-allowed: Refreshing state... [id=sg-0b1780b84d799507e]
+        aws_internet_gateway.IG: Refreshing state... [id=igw-05b12a5ac58d4d423]
+        aws_subnet.Public_Elastic: Refreshing state... [id=subnet-02c39f1b5baedab57]
+        aws_instance.ElasticSearchNode[2]: Refreshing state... [id=i-080975f920770c17f]
+        aws_instance.ElasticSearchNode[0]: Refreshing state... [id=i-040fa749ec7a79230]
+        aws_instance.ElasticSearchNode[1]: Refreshing state... [id=i-0de8fa5891e93c265]
+        aws_route_table.Elastic_Route: Refreshing state... [id=rtb-0dfe2f05121e9eff9]
+        aws_route_table_association.ES: Refreshing state... [id=rtbassoc-044f8f6937c9913b0]
+        No changes. Your infrastructure matches the configuration.
 
 ## Configure elasticsearch.yml for cluster
 
